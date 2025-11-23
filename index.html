@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Downloader & Trimmer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="/img/youtube-icon.png">
+  <!-- noUiSlider CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css" xintegrity="sha512-kd6/MnzDGXmsFFCHcKVRDge7O/wXF0yV/RzO8tD4I09pZ/kX3+2S1pB/l92vF+Gj5+P3U8X+0JvG0Y3X/8l5A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    /* Global body styling for full height and flex alignment */
+    body {
+      display: flex;
+      flex-direction: column; /* Stack header and main vertically */
+      min-height: 100vh; /* Ensure body takes at least full viewport height */
+      align-items: center; /* Center items horizontally (like the header) */
+      margin: 0; /* Remove default body margin */
+      padding: 0; /* Remove default body padding */
+    }
+
+    /* Main content area to center the card-wrapper */
+    main {
+      flex-grow: 1; /* Allow main to take up available vertical space */
+      display: flex;
+      justify-content: center; /* Center horizontally */
+      align-items: center; /* Center vertically within main */
+      width: 100%; /* Ensure main takes full width */
+      padding: 1rem; /* Add some padding around the main content */
+      box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    /* Wrapper for the main container and the preview card */
+    .card-wrapper {
+        display: flex;
+        flex-direction: row; /* Cards side by side */
+        flex-wrap: wrap; /* Allow cards to wrap to the next line on smaller screens */
+        justify-content: center; /* Center cards horizontally when they are in a row */
+        align-items: flex-start; /* Align cards to the top of the flex container */
+        gap: 2rem; /* Space between the two cards */
+        width: 100%; /* Make the wrapper take full width of main */
+        max-width: 1280px; /* Limit the overall max width for desktop */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    /* Styles for both the main input card and the preview card */
+    .container, .preview-card {
+        flex: 1 1 calc(50% - 1rem); /* Each takes roughly 50% minus half the gap */
+        min-width: 300px; /* Minimum width before breaking layout */
+        max-width: 480px; /* Max width for individual cards */
+        background-color: #fff; /* White background for card appearance */
+        border-radius: 12px; /* Rounded corners */
+        padding: 2rem; /* Inner padding */
+        box-shadow: 0 0 12px rgba(0, 0, 0, 0.08); /* Subtle shadow */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    /* Dark mode adjustments for cards */
+    body.dark .container,
+    body.dark .preview-card {
+        background-color: #1f1f1f; /* Darker background in dark mode */
+        color: white; /* Light text in dark mode */
+    }
+
+    /* Explicit centering for content inside the preview card */
+    .preview-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Center content (image, title, author) horizontally */
+        text-align: center; /* Center text within the card */
+    }
+
+    /* IMPORTANT: Ensure 'hidden' truly hides the element */
+    .hidden {
+      display: none !important; /* Added !important to guarantee hiding */
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <img src="/img/youtube-icon.png" class="header-logo" alt="YouTube Logo">
+    <div class="header-right">
+      <label for="themeToggle" class="toggle-label">Dark Mode</label>
+      <label class="switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <div class="card-wrapper">
+      <section class="container">
+        <div class="card-logo">
+          <img src="/img/youtube-icon.png" alt="YouTube Icon">
+        </div>
+        <h1>YouTube Downloader</h1>
+        <p class="subtitle">Download or trim your favorite videos</p>
+
+        <input id="url" type="text" placeholder="Paste YouTube URL..." class="input">
+
+        <select id="format" class="input" onchange="toggleQuality()">
+          <option value="mp3">MP3 (Audio)</option>
+          <option value="mp4">MP4 (Video)</option>
+        </select>
+
+        <select id="audio-quality" class="input hidden">
+          <option value="128">128 kbps</option>
+          <option value="192" selected>192 kbps</option>
+          <option value="320">320 kbps</option>
+        </select>
+
+        <select id="video-quality" class="input hidden">
+          <option value="360">360p</option>
+          <option value="480">480p</option>
+          <option value="720" selected>720p</option>
+          <option value="1080">1080p</option>
+        </select>
+        
+        <!-- Trim Section - Updated to include noUiSlider and time displays -->
+        <fieldset id="trim-section" class="trim-section" disabled>
+            <legend>Trim Options (Optional)</legend>
+            <div class="trim-time-inputs-container">
+                <div class="trim-input-group">
+                    <label for="start-time-manual">Start Time</label>
+                    <input type="text" id="start-time-manual" placeholder="MM:SS" class="input trim-manual-input">
+                </div>
+                <div class="trim-input-group">
+                    <label for="end-time-manual">End Time</label>
+                    <input type="text" id="end-time-manual" placeholder="MM:SS" class="input trim-manual-input">
+                </div>
+            </div>
+            <!-- noUiSlider will be rendered inside this div -->
+            <div id="trim-slider" class="trim-slider-container"></div>
+            <div class="trim-time-displays">
+                <span id="start-time-display">00:00</span> - <span id="end-time-display">00:00</span>
+            </div>
+            <!-- Hidden inputs to send values to backend; updated by the slider AND manual inputs -->
+            <input type="hidden" id="start-time" name="startTime">
+            <input type="hidden" id="end-time" name="endTime">
+        </fieldset>
+
+        <button onclick="openModal()" class="btn">Download</button>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section id="preview-card" class="preview-card hidden">
+        <h3 id="preview-title" class="preview-title">Video Preview</h3>
+        <div class="video-player-container" id="player-container">
+          <!-- YouTube IFrame Player will be loaded here -->
+        </div>
+        <p id="preview-author"></p>
+      </section>
+    </div>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 class="modal-title">⚠️ Download Responsibility</h2>
+      <p class="modal-text">By continuing, you confirm:</p>
+      <ul class="modal-list">
+        <li>✅ You own the content, or</li>
+        <li>✅ The content is Creative Commons/public domain, or</li>
+        <li>✅ You have legal permission to download this video.</li>
+      </ul>
+      <label class="modal-check">
+        <input type="checkbox" id="agree"> I confirm the above.
+      </label>
+      <div class="modal-actions">
+        <button onclick="closeModal()" class="cancel">Cancel</button>
+        <button onclick="proceedDownload()" class="confirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- noUiSlider JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js" xintegrity="sha512-srhBqf3B9L1yXQp4L+lJ1sJ+gJv9Pz0s5g2F3eR3uL4v7z6O8+W5o0X9zP1W7+X9e0Q2j2+7f+7p3S9X2+g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="script.js"></script>
+</body>
+</html>
